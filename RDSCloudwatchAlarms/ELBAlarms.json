@@ -1,0 +1,92 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Parameters" : {
+      "LoadBalancerName" : {
+          "Description" : "LoadBalancer Name",
+          "Type" : "String"
+      },
+      "LiveInstanceCount" : {
+          "Description" : "How many instances are attached to this ELB?",
+          "Type" : "String"
+      },
+      "TopicArn" : {
+          "Description" : "Arn for the topic.",
+          "Type" : "String",
+          "Default" : "arn:aws:sns:eu-west-1:345208298825:bnw-dev-account"
+      }
+  },
+
+  "Resources" : {
+
+    "ELB5xxAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "LoadBalancerName" }, "-elb-5xx-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "LoadBalancerName" }, "-elb-5xx-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "HTTPCode_ELB_5XX",
+        "Namespace": "AWS/ELB",
+        "Period": "300",
+        "Statistic": "Sum",
+        "Threshold": "100.0",
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [
+          {
+            "Name": "LoadBalancerName",
+            "Value": { "Ref" : "LoadBalancerName" }
+          }
+        ]
+      }
+    },
+    "ELB4xxAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "LoadBalancerName" }, "-elb-4xx-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "LoadBalancerName" }, "-elb-4xx-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "HTTPCode_ELB_4XX",
+        "Namespace": "AWS/ELB",
+        "Period": "300",
+        "Statistic": "Sum",
+        "Threshold": "100.0",
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [
+          {
+            "Name": "LoadBalancerName",
+            "Value": { "Ref" : "LoadBalancerName" }
+          }
+        ]
+      }
+    },
+    "ELBHealthHostAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "LoadBalancerName" }, "-elb-health-host-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "LoadBalancerName" }, "-elb-health-host-alarm"]]},
+        "ComparisonOperator": "LessThanThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "HealthyHostCount",
+        "Namespace": "AWS/ELB",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": { "Ref" : "LiveInstanceCount" },
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [
+          { 
+            "Name": "LoadBalancerName", 
+            "Value": { "Ref" : "LoadBalancerName" } 
+          }
+        ]
+      }
+    }
+  },
+
+  "Description" : "Creat CloudWatch Alarms for RDS."
+
+}
