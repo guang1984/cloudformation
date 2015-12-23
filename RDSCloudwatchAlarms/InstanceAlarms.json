@@ -1,0 +1,161 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+
+  "Parameters" : {
+
+        "InstanceId" : {
+          "Description" : "Instance Id",
+          "Type" : "String",
+          "Default": " "
+        },
+
+        "InstanceName" : {
+          "Description" : "Instance Name",
+          "Type" : "String",
+          "Default": " "
+        },
+
+        "MonitorLevel" : {
+          "Description" : "Choose a monitor type: Basic, Basic and Customer.",
+          "Type" : "String",
+          "Default": "Basic",
+          "AllowedValues" : [ "Basic", "Basic and Customer"],
+          "ConstraintDescription" : "Please select a monitor type: Basic, Basic and Customer"
+        },
+
+        "TopicArn" : {
+            "Description" : "Arn for the topic.",
+            "Type" : "String",
+            "Default" : "arn:aws:sns:eu-west-1:345208298825:bnw-dev-account"
+        }
+
+  },
+
+  "Conditions" : {
+    "BasicAlarm" : {"Fn::Equals" : [{"Ref" : "MonitorLevel"}, "Basic"]},
+    "BasicAndCustomerAlarm" : {"Fn::Equals" : [{"Ref" : "MonitorLevel"}, "Basic and Customer"]}
+  },
+
+  "Resources": {
+
+    "HighCPUUtilizationAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" },"-high-cpu-utilisation-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" },"-high-cpu-utilisation-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "70.0",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [ { "Name": "InstanceId", "Value": { "Ref" : "InstanceId" } } ]
+      }
+    },
+    "StatusCheckFailedInstanceAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-status-check-failed-instance-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-status-check-failed-instance-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "Period": "300",
+        "Statistic": "Sum",
+        "Threshold": "1",
+        "MetricName": "StatusCheckFailed_Instance",
+        "Namespace": "AWS/EC2",
+        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [ { "Name": "InstanceId", "Value": { "Ref" : "InstanceId" } } ]
+      }
+    },
+    "StatusCheckFailedSystemAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-status-check-failed-system-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-status-check-failed-system-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "Period": "300",
+        "Statistic": "Sum",
+        "Threshold": "1",
+        "MetricName": "StatusCheckFailed_System",
+        "Namespace": "AWS/EC2",
+        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [ { "Name": "InstanceId", "Value": { "Ref" : "InstanceId" } } ]
+      }
+    },
+
+    "HighDiskSpaceUtilizationAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Condition" : "BasicAndCustomerAlarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-high-DiskSpace-Utilization-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-high-DiskSpace-Utilization-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "80.0",
+        "MetricName": "DiskSpaceUtilization",
+        "Namespace": "System/Linux",
+        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [ 
+          { "Name": "InstanceId", "Value": { "Ref" : "InstanceId" } },
+          { "Name": "Filesystem", "Value": "/dev/xvda1" },
+          { "Name": "MountPath", "Value": "/" }
+        ]
+      }
+    },
+    "HighSwapUtilizationAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Condition" : "BasicAndCustomerAlarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-high-SwapMem-Utilization-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-high-SwapMem-Utilization-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "80.0",
+        "MetricName": "SwapUtilization",
+        "Namespace": "System/Linux",
+        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [ { "Name": "InstanceId", "Value": { "Ref" : "InstanceId" } } ]
+      }
+    },
+    "HighMemoryUtilisationAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Condition" : "BasicAndCustomerAlarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-high-Memory-Utilisation-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "InstanceId" }, "-", { "Ref" : "InstanceName" }, "-high-Memory- Utilisation-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "MemoryUtilization",
+        "Namespace": "System/Linux",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "80.0",
+        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [ { "Name": "InstanceId", "Value": { "Ref" : "InstanceId" } } ]
+      }
+    }
+
+  },
+
+  "Description": "A template for creating cloudwatch alarms."
+}
