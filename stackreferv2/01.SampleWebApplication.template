@@ -1,0 +1,123 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  
+  "Description" : "AWS CloudFormation Cross-Stack Reference Template: Reference resources from a different stack.",
+
+  "Parameters": {
+
+    "NetworkStackName": {
+      "Description": "Name of an active CloudFormation stack that contains the networking resources, such as the subnet and security group, that will be used in this stack.",
+      "Type": "String",
+      "MinLength" : 1,
+      "MaxLength" : 255,
+      "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+      "Default" : "SampleNetworkConfiguration"
+    },
+
+    "AMIId": {
+      "Description": "AMI Id",
+      "Type": "String",
+      "Default": "ami-bff32ccc"
+    }
+  },
+
+  "Resources" : {
+    "WebServerInstance": {  
+      "Type": "AWS::EC2::Instance",
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+          "configSets" : {
+            "All" : [ "ConfigureSampleApp" ]
+          },
+
+          "ConfigureSampleApp" : {
+            "packages" : {
+              "yum" : {
+                "httpd" : []
+              }
+            },
+
+            "files" : {
+              "/var/www/html/index.html" : {
+                "content" : { "Fn::Join" : ["\n", [
+                  "<img src=\"https://s3.amazonaws.com/cloudformation-examples/cloudformation_graphic.png\" alt=\"AWS CloudFormation Logo\"/>",
+                  "<h1>Congratulations, you have successfully launched the AWS CloudFormation sample.</h1>"
+                ]]},
+                "mode"    : "000644",
+                "owner"   : "root",
+                "group"   : "root"
+              }
+            },
+
+            "services" : {
+              "sysvinit" : {
+                "httpd"    : { "enabled" : "true", "ensureRunning" : "true" }
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "InstanceType"   : "t2.micro",
+        "Tags": [
+          { "Key": "Name", "Value": "tony-instance" },
+          { "Key": "belong", "Value": "tony" }
+        ],
+        "ImageId": { "Ref" : "AMIId" },
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Fn::GetAtt": [ "stackInfo", "WebServerSecurityGroup" ] }],
+          "AssociatePublicIpAddress" : "true",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::GetAtt": [ "stackInfo", "PublicSubnet2" ] }
+        }],
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "yum update -y aws-cfn-bootstrap\n",
+
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init -v ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource WebServerInstance ",
+             "         --configsets All ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n",
+
+             "# Signal the status from cfn-init\n",
+             "/opt/aws/bin/cfn-signal -e $? ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource WebServerInstance ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n"
+        ]]}}        
+      },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : "PT5M"
+        }
+      }
+    },
+
+    "stackInfo": {
+      "Type": "Custom::StackInfo",
+      "Properties": {
+        "version" : "1", 
+        "ServiceToken": { "Fn::GetAtt" : [ "embedLambdaStack", "Outputs.LookupStackOutputsArn" ] },
+        "StackName": { "Ref": "NetworkStackName" }
+      }
+    },
+
+    "embedLambdaStack" : {
+        "Type" : "AWS::CloudFormation::Stack",
+        "Properties" : {
+          "TemplateURL" : "https://s3-eu-west-1.amazonaws.com/tony-owned-bucket/lambda.json",
+          "TimeoutInMinutes" : "1"
+        }
+    }
+  },
+
+  "Outputs" : {
+    "URL" : {
+      "Description" : "URL of the sample website",
+      "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : [ "WebServerInstance", "PublicDnsName" ]}]]}
+    }
+  }
+}
