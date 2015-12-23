@@ -1,0 +1,96 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Parameters" : {
+      "DBInstanceIdentifier" : {
+          "Description" : "DB Instance Identifier",
+          "Type" : "String"
+      },
+      "DBInstanceDescribe" : {
+          "Description" : "DB Instance Describe. Digit and \"-\" and lower case letter alowed, must start and end with digit or letter.",
+          "Type" : "String",
+          "MinLength": 1,
+          "MaxLength": 255,
+          "AllowedPattern": "^[a-z0-9][0-9a-z-]*[0-9a-z]$"
+      },
+      "TopicArn" : {
+          "Description" : "Arn for the topic.",
+          "Type" : "String",
+          "Default" : "arn:aws:sns:eu-west-1:345208298825:bnw-dev-account"
+      }
+  },
+
+  "Resources" : {
+
+    "RDSCPUUtilisationAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-cpu-utilisation-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-cpu-utilisation-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/RDS",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "80.0",
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": { "Ref" : "DBInstanceIdentifier" }
+          }
+        ]
+      }
+    },
+    "RDSDBConnectionsAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-db-connections-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-db-connections-alarm"]]},
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "DatabaseConnections",
+        "Namespace": "AWS/RDS",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "60.0",
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": { "Ref" : "DBInstanceIdentifier" }
+          }
+        ]
+      }
+    },
+    "RDSFreeStorageSpaceAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-free-storage-space-alarm"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-free-storage-space-alarm"]]},
+        "ComparisonOperator": "LessThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "FreeStorageSpace",
+        "Namespace": "AWS/RDS",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "3221225472.0",
+        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": { "Ref" : "DBInstanceIdentifier" }
+          }
+        ]
+      }
+    }
+  },
+
+  "Description" : "Creat CloudWatch Alarms for RDS."
+
+}
