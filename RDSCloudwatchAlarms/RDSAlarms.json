@@ -16,7 +16,7 @@
       "TopicArn" : {
           "Description" : "Arn for the topic.",
           "Type" : "String",
-          "Default" : "arn:aws:sns:eu-west-1:345208298825:bnw-dev-account"
+          "Default" : ""
       }
   },
 
