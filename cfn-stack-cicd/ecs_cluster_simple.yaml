@@ -1,0 +1,478 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Network Configuration"
+        Parameters: 
+          - VpcId
+          - SubnetID
+          - EcsSecurityGroup
+      - 
+        Label: 
+          default: "Amazon EC2 Configuration"
+        Parameters: 
+          - InstanceType
+          - KeyName
+      - 
+        Label: 
+          default: "ECS Cluster Configuration"
+        Parameters: 
+          - ECSClusterName
+          - DockerImage
+          - ContainerCpu
+          - ContainerMemory
+          - ALBListenerPort
+          - ALBTGPort
+          - ContainerPort
+          - DesiredClusterCapacity
+          - MaxClusterSize
+          - MinClusterSize
+          - ECSServiceMaxCapacity
+          - ECSServiceMinCapacity
+      - 
+        Label: 
+          default: "Tags"
+        Parameters: 
+          - InstanceName
+          - OpsOwner
+          - ProductOwner
+          - Department
+          - Product
+          - Owners
+    ParameterLabels: 
+      VpcId: 
+        default: "VPC Id"
+
+
+Parameters:
+
+  InstanceName:
+    Type: String
+    Default: splash_docker_cluster
+    Description: Name tag of the ec2 instances.
+
+  OpsOwner:
+    Type: String
+    Default: liyuguang@cmcm.com
+    Description: Operation Owner Email.
+
+  ProductOwner:
+    Type: String
+    Default: liyuguang@cmcm.com
+    Description: Product Owner Email.
+
+  Department:
+    Type: String
+    Default: operation
+    Description: Department.
+
+  Product:
+    Type: String
+    Default: ops-test
+    Description: Product.
+
+  Owners:
+    Type: String
+    Default: liyuguang
+    Description: Owners.
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-00a23269
+    Description: Select a VPC that allows instances access to the Internet.
+
+  SubnetID:
+    Type: CommaDelimitedList
+    Default: subnet-72db233f,subnet-69ed8a00,subnet-ff74db84
+    Description: Select at least two subnets in your selected VPC.
+
+  EcsSecurityGroup:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Default: sg-cd3f6da4
+    Description: ECS Security Group
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: yuguang-liveme-ohio-key
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues: [t2.micro, t2.small, t2.medium, t2.large, m3.medium, m3.large,
+      m3.xlarge, m3.2xlarge, m4.large, m4.xlarge, m4.2xlarge, m4.4xlarge, m4.10xlarge,
+      c4.large, c4.xlarge, c4.2xlarge, c4.4xlarge, c4.8xlarge, c3.large, c3.xlarge,
+      c3.2xlarge, c3.4xlarge, c3.8xlarge, r3.large, r3.xlarge, r3.2xlarge, r3.4xlarge,
+      r3.8xlarge, i2.xlarge, i2.2xlarge, i2.4xlarge, i2.8xlarge]
+    ConstraintDescription: Please choose a valid instance type.
+
+  ECSClusterName:
+    Type: String
+    Default: splash-docker-cluster
+    Description: Name of the ecs cluster.
+
+  DockerImage:
+    Type: String
+    Default: httpd:2.4
+    Description: Docker iamge to use.
+
+  ContainerCpu:
+    Type: String
+    Default: 256
+    Description: Docker iamge to use.
+
+  ContainerMemory:
+    Type: String
+    Default: 300
+    Description: Docker iamge to use.
+
+  ALBListenerPort:
+    Type: String
+    Default: 80
+    Description: ALB Listener Port.
+
+  ALBTGPort:
+    Type: String
+    Default: 80
+    Description: The port the load balancer uses when routing traffic to targets in this target group (1-65535).
+
+  ContainerPort:
+    Type: String
+    Default: 80
+    Description: The Container Port.
+
+  DesiredClusterCapacity:
+    Type: Number
+    Default: '1'
+    Description: Number of instances to launch in your ECS cluster.
+
+  MinClusterSize:
+    Type: Number
+    Default: '1'
+    Description: Minimum number of instances that can be launched in your ECS cluster.
+
+  MaxClusterSize:
+    Type: Number
+    Default: '1'
+    Description: Maximum number of instances that can be launched in your ECS cluster.
+
+  ECSServiceMaxCapacity:
+    Type: Number
+    Default: '1'
+    Description: Maximum number of containers that can be launched in your ECS cluster.
+
+  ECSServiceMinCapacity:
+    Type: Number
+    Default: '1'
+    Description: Minimum number of containers that can be launched in your ECS cluster.
+
+
+Mappings:
+  AWSRegionToAMI:
+    us-east-1:
+      AMIID: ami-275ffe31
+    us-east-2:
+      AMIID: ami-62745007
+    us-west-1:
+      AMIID: ami-689bc208
+    us-west-2:
+      AMIID: ami-62d35c02
+    eu-west-1:
+      AMIID: ami-95f8d2f3
+    eu-west-2:
+      AMIID: ami-bf9481db
+    eu-central-1:
+      AMIID: ami-085e8a67
+    ap-northeast-1:
+      AMIID: ami-f63f6f91
+    ap-southeast-1:
+      AMIID: ami-b4ae1dd7
+    ap-southeast-2:
+      AMIID: ami-fbe9eb98
+    ca-central-1:
+      AMIID: ami-ee58e58a
+
+
+Resources:
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref 'ECSClusterName'
+
+  taskdefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Join ['-', [!Ref 'ECSClusterName', td]]
+      ContainerDefinitions:
+      - Name: !Join ['-', [!Ref 'ECSClusterName', container]]
+        Cpu: !Ref ContainerCpu
+        Essential: 'true'
+        Image: !Ref 'DockerImage'
+        Memory: !Ref ContainerMemory
+        PortMappings:
+        - ContainerPort: !Ref 'ContainerPort'
+
+  service:
+    Type: AWS::ECS::Service
+    DependsOn: 
+      - ALBListener
+      - ECSAutoScalingGroup
+    Properties:
+      Cluster: !Ref 'ECSCluster'
+      DeploymentConfiguration:
+        MaximumPercent: 150
+        MinimumHealthyPercent: 50
+      PlacementStrategies: 
+       - Type: spread
+         Field: attribute:ecs.availability-zone
+       - Type: spread
+         Field: instanceId
+      DesiredCount: '1'
+      LoadBalancers:
+      - ContainerName: !Join ['-', [!Ref 'ECSClusterName', 'container']]
+        ContainerPort: !Ref 'ContainerPort'
+        TargetGroupArn: !Ref 'ECSTG'
+      Role: !Ref 'ECSServiceRole'
+      TaskDefinition: !Ref 'taskdefinition'
+
+  ECSALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Join ['-', [!Ref 'ECSClusterName']]
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '30'
+      Subnets: !Ref 'SubnetID'
+      SecurityGroups: !Ref 'EcsSecurityGroup'
+      Tags:
+      -
+        Key : department
+        Value : !Ref 'Department'
+      -
+        Key : product
+        Value : !Ref 'Product'
+      -
+        Key : OpsOwner
+        Value : !Ref 'OpsOwner'
+      -
+        Key : ProductOwner
+        Value : !Ref 'ProductOwner'
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn: ECSServiceRole
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'ECSTG'
+      LoadBalancerArn: !Ref 'ECSALB'
+      Port: !Ref 'ALBListenerPort'
+      Protocol: HTTP
+
+  ECSALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+      - Type: forward
+        TargetGroupArn: !Ref 'ECSTG'
+      Conditions:
+      - Field: path-pattern
+        Values: [/]
+      ListenerArn: !Ref 'ALBListener'
+      Priority: 1
+
+  ECSTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: ECSALB
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Name: !Join ['-', [!Ref 'ECSClusterName', tg]]
+      Port: !Ref 'ALBTGPort'
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref 'VpcId'
+      Tags:
+      -
+        Key : department
+        Value : !Ref 'Department'
+      -
+        Key : product
+        Value : !Ref 'Product'
+      -
+        Key : OpsOwner
+        Value : !Ref 'OpsOwner'
+      -
+        Key : ProductOwner
+        Value : !Ref 'ProductOwner'
+
+  ECSServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['-', [!Ref 'ECSClusterName', service-role]]
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['elasticloadbalancing:DeregisterInstancesFromLoadBalancer', 'elasticloadbalancing:DeregisterTargets',
+              'elasticloadbalancing:Describe*', 'elasticloadbalancing:RegisterInstancesWithLoadBalancer',
+              'elasticloadbalancing:RegisterTargets', 'ec2:Describe*', 'ec2:AuthorizeSecurityGroupIngress']
+            Resource: '*'
+
+  ServiceScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn: service
+    Properties:
+      MaxCapacity: !Ref 'ECSServiceMaxCapacity'
+      MinCapacity: !Ref 'ECSServiceMinCapacity'
+      ResourceId: !Join ['', [service/, !Ref 'ECSCluster', /, !GetAtt [service, Name]]]
+      RoleARN: !GetAtt [AutoscalingRole, Arn]
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref 'SubnetID'
+      LaunchConfigurationName: !Ref 'ContainerInstances'
+      MinSize: !Ref 'MinClusterSize'
+      MaxSize: !Ref 'MaxClusterSize'
+      DesiredCapacity: !Ref 'DesiredClusterCapacity'
+      Tags:
+      -
+        Key : Name
+        Value : !Ref 'InstanceName'
+        PropagateAtLaunch : true
+      -
+        Key : department
+        Value : !Ref 'Department'
+        PropagateAtLaunch : true
+      -
+        Key : product
+        Value : !Ref 'Product'
+        PropagateAtLaunch : true
+      -
+        Key : OpsOwner
+        Value : !Ref 'OpsOwner'
+        PropagateAtLaunch : true
+      -
+        Key : ProductOwner
+        Value : !Ref 'ProductOwner'
+        PropagateAtLaunch : true
+      -
+        Key : owners
+        Value : !Ref 'Owners'
+        PropagateAtLaunch : true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: 'true'
+
+  ContainerInstances:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !FindInMap [AWSRegionToAMI, !Ref 'AWS::Region', AMIID]
+      SecurityGroups: !Ref 'EcsSecurityGroup'
+      InstanceType: !Ref 'InstanceType'
+      IamInstanceProfile: !Ref 'EC2InstanceProfile'
+      KeyName: !Ref 'KeyName'
+      UserData:
+        Fn::Base64: !Sub |
+          Content-Type: multipart/mixed; boundary="==BOUNDARY=="
+          MIME-Version: 1.0
+
+          --==BOUNDARY==
+          MIME-Version: 1.0
+          Content-Type: text/x-shellscript; charset="us-ascii"
+          #!/bin/bash
+          echo ECS_CLUSTER=${ECSClusterName} >> /etc/ecs/ecs.config
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
+
+          --==BOUNDARY==--
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['-', [!Ref 'ECSClusterName', ec2-role]]
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['ecs:CreateCluster', 'ecs:DeregisterContainerInstance', 'ecs:DiscoverPollEndpoint',
+              'ecs:Poll', 'ecs:RegisterContainerInstance', 'ecs:StartTelemetrySession',
+              'ecs:Submit*', 'logs:CreateLogStream', 'logs:CreateLogGroup', 'logs:PutLogEvents']
+            Resource: '*'
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
+
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [application-autoscaling.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: service-autoscaling
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['application-autoscaling:*', 'cloudwatch:DescribeAlarms', 'cloudwatch:PutMetricAlarm',
+              'ecs:DescribeServices', 'ecs:UpdateService']
+            Resource: '*'
+
+
+Outputs:
+  ecsservice:
+    Value: !GetAtt service.Name
+
+  ecscluster:
+    Value: !Ref 'ECSCluster'
+
+  ECSALB:
+    Description: Your ALB DNS URL
+    Value: !Join ['', [!GetAtt [ECSALB, DNSName]]]
+
+  taskdef:
+    Value: !Ref 'taskdefinition'
+
+Description: "A template for creating ecs cluster."

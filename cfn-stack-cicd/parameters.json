@@ -1,0 +1,7 @@
+{
+  "Parameters" : {
+    "SubnetID" : "subnet-72db233f,subnet-69ed8a00,subnet-ff74db84",
+    "InstanceType" : "t2.micro",
+    "DockerImage" : "httpd:2.4"
+  }
+}

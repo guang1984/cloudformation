@@ -24,17 +24,21 @@
 
     "RDSCPUUtilisationAlarm": {
       "Type": "AWS::CloudWatch::Alarm",
+      "Metadata":{
+        "Comment" : "Alarm when cpu utilisation is greater than 85%."
+      },
       "Properties": {
         "ActionsEnabled": "true",
-        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-cpu-utilisation-alarm"]]},
-        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-cpu-utilisation-alarm"]]},
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-cpu-utilisation>=85%"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-cpu-utilisation-alarm-cfn"]]},
         "ComparisonOperator": "GreaterThanOrEqualToThreshold",
         "EvaluationPeriods": "1",
         "MetricName": "CPUUtilization",
         "Namespace": "AWS/RDS",
         "Period": "300",
         "Statistic": "Average",
-        "Threshold": "80.0",
+        "Threshold": "85.0",
+        "OKActions": [ { "Ref" : "TopicArn" } ],
         "AlarmActions": [ { "Ref" : "TopicArn" } ],
         "Dimensions": [
           {
@@ -46,17 +50,21 @@
     },
     "RDSDBConnectionsAlarm": {
       "Type": "AWS::CloudWatch::Alarm",
+      "Metadata":{
+        "Comment" : "Alarm when db connections are greater than 300."
+      },
       "Properties": {
         "ActionsEnabled": "true",
-        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-db-connections-alarm"]]},
-        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-db-connections-alarm"]]},
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-db-connections>=300"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-db-connections-alarm-cfn"]]},
         "ComparisonOperator": "GreaterThanOrEqualToThreshold",
         "EvaluationPeriods": "1",
         "MetricName": "DatabaseConnections",
         "Namespace": "AWS/RDS",
         "Period": "300",
         "Statistic": "Average",
-        "Threshold": "60.0",
+        "Threshold": "300.0",
+        "OKActions": [ { "Ref" : "TopicArn" } ],
         "AlarmActions": [ { "Ref" : "TopicArn" } ],
         "Dimensions": [
           {
@@ -68,10 +76,13 @@
     },
     "RDSFreeStorageSpaceAlarm": {
       "Type": "AWS::CloudWatch::Alarm",
+      "Metadata":{
+        "Comment" : "Alarm when free storage space is less than 3221225472 bytes(3G)"
+      },
       "Properties": {
         "ActionsEnabled": "true",
-        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-free-storage-space-alarm"]]},
-        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-free-storage-space-alarm"]]},
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-free-storage-space<=3G"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-free-storage-space-alarm-cfn"]]},
         "ComparisonOperator": "LessThanOrEqualToThreshold",
         "EvaluationPeriods": "1",
         "MetricName": "FreeStorageSpace",
@@ -79,7 +90,33 @@
         "Period": "300",
         "Statistic": "Average",
         "Threshold": "3221225472.0",
-        "InsufficientDataActions" : [ { "Ref" : "TopicArn" } ],
+        "OKActions" : [ { "Ref" : "TopicArn" } ],
+        "AlarmActions": [ { "Ref" : "TopicArn" } ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": { "Ref" : "DBInstanceIdentifier" }
+          }
+        ]
+      }
+    },
+    "RDSFreeableMemoryAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Metadata":{
+        "Comment" : "Alarm when free memory is less than 524288000 bytes(100M)"
+      },
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmName": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-freeable-memory-space<=100M"]]},
+        "AlarmDescription": {"Fn::Join": ["", [{ "Ref" : "DBInstanceDescribe" }, "-rds-freeable-memory-space-alarm-cfn"]]},
+        "ComparisonOperator": "LessThanOrEqualToThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "FreeableMemory",
+        "Namespace": "AWS/RDS",
+        "Period": "300",
+        "Statistic": "Average",
+        "Threshold": "524288000.0",
+        "OKActions" : [ { "Ref" : "TopicArn" } ],
         "AlarmActions": [ { "Ref" : "TopicArn" } ],
         "Dimensions": [
           {
